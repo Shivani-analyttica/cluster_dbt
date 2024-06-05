@@ -1,0 +1,19 @@
+sources:
+  - name: SNOWFLAKE_SAMPLE_DATA
+    description: 'Sample database by snowflake'
+    database: SNOWFLAKE_SAMPLE_DATA
+    schema: TPCDS_SF10TCL
+    tables:
+      - name: STORE_SALES
+      - name: DATE_DIM
+      - name: STORE
+      - name: STORE_RETURNS
+      - name: CATALOG_SALES
+      - name: CATALOG_RETURNS
+      - name: WEB_SALES
+      - name: WEB_RETURNS
+      - name: WEB_PAGE
+      - name: HOUSEHOLD_DEOGRAPHICS
+      - name: TIME_DIM
+      - name: CUSTOMER
+      - name: ITEM
