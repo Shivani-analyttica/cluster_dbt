@@ -3,103 +3,183 @@
     alias='CROSS_ITEMS'
 ) }}
 
-WITH CROSS_ITEMS AS (
-    SELECT I_ITEM_SK AS SS_ITEM_SK
-    FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} ITEM
-    JOIN (
-        SELECT ISS.I_BRAND_ID AS BRAND_ID,
-               ISS.I_CLASS_ID AS CLASS_ID,
-               ISS.I_CATEGORY_ID AS CATEGORY_ID
-        FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'STORE_SALES') }} STORE_SALES
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} ISS ON STORE_SALES.SS_ITEM_SK = ISS.I_ITEM_SK
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} D1 ON STORE_SALES.SS_SOLD_DATE_SK = D1.D_DATE_SK
-        WHERE D1.D_YEAR BETWEEN 1999 AND 2001
-        INTERSECT
-        SELECT ICS.I_BRAND_ID,
-               ICS.I_CLASS_ID,
-               ICS.I_CATEGORY_ID
-        FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'CATALOG_SALES') }} CATALOG_SALES
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} ICS ON CATALOG_SALES.CS_ITEM_SK = ICS.I_ITEM_SK
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} D2 ON CATALOG_SALES.CS_SOLD_DATE_SK = D2.D_DATE_SK
-        WHERE D2.D_YEAR BETWEEN 1999 AND 2001
-        INTERSECT
-        SELECT IWS.I_BRAND_ID,
-               IWS.I_CLASS_ID,
-               IWS.I_CATEGORY_ID
-        FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'WEB_SALES') }} WEB_SALES
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} IWS ON WEB_SALES.WS_ITEM_SK = IWS.I_ITEM_SK
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} D3 ON WEB_SALES.WS_SOLD_DATE_SK = D3.D_DATE_SK
-        WHERE D3.D_YEAR BETWEEN 1999 AND 2001
-    ) X
-    WHERE X.BRAND_ID = I_BRAND_ID
-      AND X.CLASS_ID = I_CLASS_ID
-      AND X.CATEGORY_ID = I_CATEGORY_ID
+-- CTE for the ITEM table
+with item_cte as (
+    select
+        i_item_sk,
+        i_brand_id,
+        i_class_id,
+        i_category_id
+    from {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }}
 ),
-AVG_SALES AS (
-    SELECT AVG(QUANTITY * LIST_PRICE) AVERAGE_SALES
-    FROM (
-        SELECT SS_QUANTITY QUANTITY,
-               SS_LIST_PRICE LIST_PRICE
-        FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'STORE_SALES') }} STORE_SALES
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} D1 ON STORE_SALES.SS_SOLD_DATE_SK = D1.D_DATE_SK
-        WHERE D1.D_YEAR BETWEEN 1999 AND 2001
-        UNION ALL
-        SELECT CS_QUANTITY QUANTITY,
-               CS_LIST_PRICE LIST_PRICE
-        FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'CATALOG_SALES') }} CATALOG_SALES
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} D2 ON CATALOG_SALES.CS_SOLD_DATE_SK = D2.D_DATE_SK
-        WHERE D2.D_YEAR BETWEEN 1999 AND 2001
-        UNION ALL
-        SELECT WS_QUANTITY QUANTITY,
-               WS_LIST_PRICE LIST_PRICE
-        FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'WEB_SALES') }} WEB_SALES
-        JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} D3 ON WEB_SALES.WS_SOLD_DATE_SK = D3.D_DATE_SK
-        WHERE D3.D_YEAR BETWEEN 1999 AND 2001
+
+-- CTE for the STORE_SALES table
+store_sales_cte as (
+    select
+        ss_ticket_number, -- Surrogate key for STORE_SALES
+        ss_item_sk,
+        ss_sold_date_sk,
+        ss_quantity,
+        ss_list_price,
+        iss.i_brand_id,
+        iss.i_class_id,
+        iss.i_category_id
+    from {{ source('SNOWFLAKE_SAMPLE_DATA', 'STORE_SALES') }} store_sales
+    join {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} iss on store_sales.ss_item_sk = iss.i_item_sk
+    join {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} d1 on store_sales.ss_sold_date_sk = d1.d_date_sk
+    where d1.d_year between 1999 and 2001
+),
+
+-- CTE for the CATALOG_SALES table
+catalog_sales_cte as (
+    select
+        cs_order_number, -- Surrogate key for CATALOG_SALES
+        cs_item_sk,
+        cs_sold_date_sk,
+        cs_quantity,
+        cs_list_price,
+        ics.i_brand_id,
+        ics.i_class_id,
+        ics.i_category_id
+    from {{ source('SNOWFLAKE_SAMPLE_DATA', 'CATALOG_SALES') }} catalog_sales
+    join {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} ics on catalog_sales.cs_item_sk = ics.i_item_sk
+    join {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} d2 on catalog_sales.cs_sold_date_sk = d2.d_date_sk
+    where d2.d_year between 1999 and 2001
+),
+
+-- CTE for the WEB_SALES table
+web_sales_cte as (
+    select
+        ws_order_number, -- Surrogate key for WEB_SALES
+        ws_item_sk,
+        ws_sold_date_sk,
+        ws_quantity,
+        ws_list_price,
+        iws.i_brand_id,
+        iws.i_class_id,
+        iws.i_category_id
+    from {{ source('SNOWFLAKE_SAMPLE_DATA', 'WEB_SALES') }} web_sales
+    join {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} iws on web_sales.ws_item_sk = iws.i_item_sk
+    join {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} d3 on web_sales.ws_sold_date_sk = d3.d_date_sk
+    where d3.d_year between 1999 and 2001
+),
+
+-- CTE for the DATE_DIM table
+date_dim_cte as (
+    select
+        d_date_sk,
+        d_year,
+        d_week_seq,
+        d_moy,
+        d_dom
+    from {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }}
+),
+
+-- CTE to intersect brand, class, and category IDs across sales channels
+cross_items as (
+    select distinct
+        i_item_sk as ss_item_sk
+    from item_cte item
+    join (
+        select
+            iss.i_brand_id,
+            iss.i_class_id,
+            iss.i_category_id
+        from store_sales_cte store_sales
+        join item_cte iss on store_sales.ss_item_sk = iss.i_item_sk
+        intersect
+        select
+            ics.i_brand_id,
+            ics.i_class_id,
+            ics.i_category_id
+        from catalog_sales_cte catalog_sales
+        join item_cte ics on catalog_sales.cs_item_sk = ics.i_item_sk
+        intersect
+        select
+            iws.i_brand_id,
+            iws.i_class_id,
+            iws.i_category_id
+        from web_sales_cte web_sales
+        join item_cte iws on web_sales.ws_item_sk = iws.i_item_sk
+    ) x on x.i_brand_id = item.i_brand_id
+       and x.i_class_id = item.i_class_id
+       and x.i_category_id = item.i_category_id
+),
+
+-- CTE to calculate average sales
+avg_sales as (
+    select
+        avg(quantity * list_price) as average_sales
+    from (
+        select
+            ss_quantity as quantity,
+            ss_list_price as list_price
+        from store_sales_cte
+        union all
+        select
+            cs_quantity as quantity,
+            cs_list_price as list_price
+        from catalog_sales_cte
+        union all
+        select
+            ws_quantity as quantity,
+            ws_list_price as list_price
+        from web_sales_cte
     )
+),
+
+-- CTE for sales data for the current year (2000)
+this_year as (
+    select
+        'store' as channel,
+        item.i_brand_id,
+        item.i_class_id,
+        item.i_category_id,
+        sum(store_sales.ss_quantity * store_sales.ss_list_price) as sales,
+        count(store_sales.ss_ticket_number) as number_sales -- Using surrogate key to count sales
+    from {{ source('SNOWFLAKE_SAMPLE_DATA', 'STORE_SALES') }} store_sales
+    join item_cte item on store_sales.ss_item_sk = item.i_item_sk
+    join date_dim_cte d1 on store_sales.ss_sold_date_sk = d1.d_date_sk
+    where store_sales.ss_item_sk in (select ss_item_sk from cross_items)
+      and d1.d_week_seq = (select d_week_seq from date_dim_cte where d_year = 2000 and d_moy = 12 and d_dom = 11)
+    group by item.i_brand_id, item.i_class_id, item.i_category_id
+    having sum(store_sales.ss_quantity * store_sales.ss_list_price) > (select average_sales from avg_sales)
+),
+
+-- CTE for sales data for the previous year (1999)
+last_year as (
+    select
+        'store' as channel,
+        item.i_brand_id,
+        item.i_class_id,
+        item.i_category_id,
+        sum(store_sales.ss_quantity * store_sales.ss_list_price) as sales,
+        count(store_sales.ss_ticket_number) as number_sales -- Using surrogate key to count sales
+    from {{ source('SNOWFLAKE_SAMPLE_DATA', 'STORE_SALES') }} store_sales
+    join item_cte item on store_sales.ss_item_sk = item.i_item_sk
+    join date_dim_cte d2 on store_sales.ss_sold_date_sk = d2.d_date_sk
+    where store_sales.ss_item_sk in (select ss_item_sk from cross_items)
+      and d2.d_week_seq = (select d_week_seq from date_dim_cte where d_year = 1999 and d_moy = 12 and d_dom = 11)
+    group by item.i_brand_id, item.i_class_id, item.i_category_id
+    having sum(store_sales.ss_quantity * store_sales.ss_list_price) > (select average_sales from avg_sales)
 )
-SELECT THIS_YEAR.CHANNEL TY_CHANNEL,
-       THIS_YEAR.I_BRAND_ID TY_BRAND,
-       THIS_YEAR.I_CLASS_ID TY_CLASS,
-       THIS_YEAR.I_CATEGORY_ID TY_CATEGORY,
-       THIS_YEAR.SALES TY_SALES,
-       THIS_YEAR.NUMBER_SALES TY_NUMBER_SALES,
-       LAST_YEAR.CHANNEL LY_CHANNEL,
-       LAST_YEAR.I_BRAND_ID LY_BRAND,
-       LAST_YEAR.I_CLASS_ID LY_CLASS,
-       LAST_YEAR.I_CATEGORY_ID LY_CATEGORY,
-       LAST_YEAR.SALES LY_SALES,
-       LAST_YEAR.NUMBER_SALES LY_NUMBER_SALES
-FROM (
-    SELECT 'store' CHANNEL,
-           I_BRAND_ID,
-           I_CLASS_ID,
-           I_CATEGORY_ID,
-           SUM(SS_QUANTITY * SS_LIST_PRICE) SALES,
-           COUNT(*) NUMBER_SALES
-    FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'STORE_SALES') }} STORE_SALES
-    JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} ITEM ON STORE_SALES.SS_ITEM_SK = ITEM.I_ITEM_SK
-    JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} D1 ON STORE_SALES.SS_SOLD_DATE_SK = D1.D_DATE_SK
-    WHERE SS_ITEM_SK IN (SELECT SS_ITEM_SK FROM CROSS_ITEMS)
-      AND D1.D_WEEK_SEQ = (SELECT D_WEEK_SEQ FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} WHERE D_YEAR = 2000 AND D_MOY = 12 AND D_DOM = 11)
-    GROUP BY I_BRAND_ID, I_CLASS_ID, I_CATEGORY_ID
-    HAVING SUM(SS_QUANTITY * SS_LIST_PRICE) > (SELECT AVERAGE_SALES FROM AVG_SALES)
-) THIS_YEAR
-JOIN (
-    SELECT 'store' CHANNEL,
-           I_BRAND_ID,
-           I_CLASS_ID,
-           I_CATEGORY_ID,
-           SUM(SS_QUANTITY * SS_LIST_PRICE) SALES,
-           COUNT(*) NUMBER_SALES
-    FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'STORE_SALES') }} STORE_SALES
-    JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'ITEM') }} ITEM ON STORE_SALES.SS_ITEM_SK = ITEM.I_ITEM_SK
-    JOIN {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} D2 ON STORE_SALES.SS_SOLD_DATE_SK = D2.D_DATE_SK
-    WHERE SS_ITEM_SK IN (SELECT SS_ITEM_SK FROM CROSS_ITEMS)
-      AND D2.D_WEEK_SEQ = (SELECT D_WEEK_SEQ FROM {{ source('SNOWFLAKE_SAMPLE_DATA', 'DATE_DIM') }} WHERE D_YEAR = 1999 AND D_MOY = 12 AND D_DOM = 11)
-    GROUP BY I_BRAND_ID, I_CLASS_ID, I_CATEGORY_ID
-    HAVING SUM(SS_QUANTITY * SS_LIST_PRICE) > (SELECT AVERAGE_SALES FROM AVG_SALES)
-) LAST_YEAR
-ON THIS_YEAR.I_BRAND_ID = LAST_YEAR.I_BRAND_ID
-   AND THIS_YEAR.I_CLASS_ID = LAST_YEAR.I_CLASS_ID
-   AND THIS_YEAR.I_CATEGORY_ID = LAST_YEAR.I_CATEGORY_ID
-ORDER BY THIS_YEAR.CHANNEL, THIS_YEAR.I_BRAND_ID, THIS_YEAR.I_CLASS_ID, THIS_YEAR.I_CATEGORY_ID
+
+-- Final query to combine this year and last year sales data
+select
+    this_year.channel as ty_channel,
+    this_year.i_brand_id as ty_brand,
+    this_year.i_class_id as ty_class,
+    this_year.i_category_id as ty_category,
+    this_year.sales as ty_sales,
+    this_year.number_sales as ty_number_sales,
+    last_year.channel as ly_channel,
+    last_year.i_brand_id as ly_brand,
+    last_year.i_class_id as ly_class,
+    last_year.i_category_id as ly_category,
+    last_year.sales as ly_sales,
+    last_year.number_sales as ly_number_sales
+from this_year
+join last_year on this_year.i_brand_id = last_year.i_brand_id
+   and this_year.i_class_id = last_year.i_class_id
+   and this_year.i_category_id = last_year.i_category_id
+order by this_year.channel, this_year.i_brand_id, this_year.i_class_id, this_year.i_category_id
