@@ -1,0 +1,36 @@
+
+
+
+-- query 11th:-
+#### Purpose:
+The SQL script aims to analyze customer sales data from a Snowflake sample database, focusing on yearly sales trends for both store and web sales. It filters customers based on specific conditions related to their purchasing behavior across two consecutive years.
+
+#### Components:
+
+1. **Common Table Expressions (CTEs):**
+   - **customer_cte:** Extracts data from the `CUSTOMER` table, including customer ID, name, preferred customer flag, birth country, login, and email address.
+   - **store_sales_cte:** Retrieves data from the `STORE_SALES` table, containing customer ID, sold date, list price, and discount amount for store sales.
+   - **web_sales_cte:** Fetches data from the `WEB_SALES` table, including customer ID, sold date, list price, and discount amount for web sales.
+   - **date_dim_cte:** Collects data from the `DATE_DIM` table, primarily focusing on date keys and years.
+
+2. **Yearly Sales Calculation CTEs:**
+   - **store_sales_yearly:** Calculates yearly total sales for store purchases, including customer details, year, and total sales amount.
+   - **web_sales_yearly:** Computes yearly total sales for web purchases, including customer details, year, and total sales amount.
+
+3. **Union CTE:**
+   - **year_total:** Combines the yearly sales data from store and web sales CTEs into a single dataset.
+
+4. **Filtered Results CTE:**
+   - **filtered_results:** Filters the combined sales data based on specific conditions:
+     - Customers must have made both store and web purchases in the years 2001 and 2002.
+     - Sales totals for both store and web purchases in 2001 and 2002 must be greater than zero.
+     - Compares the ratio of web sales in 2002 to 2001 with the ratio of store sales in 2002 to 2001, ensuring web sales growth relative to store sales growth.
+
+5. **Final Query:**
+   - Selects and orders the filtered results, including customer ID, first name, last name, and preferred customer flag.
+
+#### Usage Instructions:
+1. Ensure the Snowflake sample data is accessible and properly configured.
+2. Execute the SQL script in a Snowflake environment.
+3. Review the filtered results to analyze customer sales trends across consecutive years.
+

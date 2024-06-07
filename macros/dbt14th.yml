@@ -1,0 +1,31 @@
+
+--query 14th:-
+
+#### Purpose:
+The SQL script aims to analyze sales data across different channels (store, catalog, and web) for the years 1999 to 2001. It identifies common items sold across channels and compares sales performance between the current year (2000) and the previous year (1999) based on brand, class, and category IDs.
+
+#### Components:
+
+1. **Materialized Table Configuration:**
+   - Defines a materialized table named CROSS_ITEMS to store the intersection of brand, class, and category IDs across sales channels.
+
+2. **Common Table Expressions (CTEs):**
+   - **item_cte:** Extracts item data including surrogate key, brand ID, class ID, and category ID from the ITEM table.
+   - **store_sales_cte:** Retrieves store sales data including ticket number, item surrogate key, sold date surrogate key, quantity, list price, brand ID, class ID, and category ID for the years 1999 to 2001.
+   - **catalog_sales_cte:** Retrieves catalog sales data including order number, item surrogate key, sold date surrogate key, quantity, list price, brand ID, class ID, and category ID for the years 1999 to 2001.
+   - **web_sales_cte:** Retrieves web sales data including order number, item surrogate key, sold date surrogate key, quantity, list price, brand ID, class ID, and category ID for the years 1999 to 2001.
+   - **date_dim_cte:** Extracts date dimension data including date surrogate key, year, week sequence, month of year, and day of month from the DATE_DIM table.
+   - **cross_items:** Identifies common items sold across store, catalog, and web sales channels by intersecting brand, class, and category IDs.
+   - **avg_sales:** Calculates the average sales based on quantity and list price across store, catalog, and web sales.
+   - **this_year:** Retrieves sales data for the current year (2000) from store sales and filters based on specified conditions.
+   - **last_year:** Retrieves sales data for the previous year (1999) from store sales and filters based on specified conditions.
+
+3. **Final Query:**
+   - Combines sales data for the current year (2000) and the previous year (1999) based on brand, class, and category IDs.
+   - Includes sales figures and counts for both years across different channels.
+
+#### Usage Instructions:
+1. Ensure the Snowflake sample data is accessible and properly configured.
+2. Execute the SQL script in a Snowflake environment.
+3. Review the output to analyze sales performance across different channels for the specified years.
+
