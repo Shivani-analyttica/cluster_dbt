@@ -1,5 +1,5 @@
 {{ config(
-    materialized='table',
+    materialized='view',
     alias='CROSS_ITEMS'
 ) }}
 

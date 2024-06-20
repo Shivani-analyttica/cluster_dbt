@@ -1,3 +1,9 @@
+{{ config(
+    materialized='view',
+    
+) }}
+
+
 -- CTE for the CUSTOMER table
 with customer_cte as (
    select
